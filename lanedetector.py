@@ -49,7 +49,7 @@ class LaneDetector:
 
         return white_yellow_binary
 
-    # For debug purpose
+    # For debug
     def _draw_sliding_windows(self, binary_warped):
         # Take a histogram of the bottom half of the image
         histogram = np.sum(binary_warped[int(binary_warped.shape[0]/2):,:], axis=0)
@@ -61,12 +61,11 @@ class LaneDetector:
         leftx_base = np.argmax(histogram[:midpoint])
         rightx_base = np.argmax(histogram[midpoint:]) + midpoint
 
-        window_height = 80
-        minpix = 50
-        margin = 100
+        minpix = 40
+        margin = 80
         # Choose the number of sliding windows
-        nwindows = np.int(np.ceil(binary_warped.shape[0]/window_height))
-
+        nwindows = 9
+        window_height = np.int(binary_warped.shape[0]/nwindows)
         # Identify the x and y positions of all nonzero pixels in the image
         nonzero = binary_warped.nonzero()
         nonzeroy = np.array(nonzero[0])
@@ -119,23 +118,28 @@ class LaneDetector:
         # Warp the blank back to original image space using inverse perspective matrix (Minv)
         newwarp = cv2.warpPerspective(color_warp, self.perspectiveTransformer.Minv, (undistorted.shape[1], undistorted.shape[0]))
         # Combine the result with the original image
-        result = cv2.addWeighted(undistorted, 1, newwarp, 0.5, 0)
+        result = cv2.addWeighted(undistorted, 1, newwarp, 0.3, 0)
 
         return result
 
     def _draw_sub_windows(self, result, binary_image, warped):
-        sub_window_size = (np.int_(result.shape[0] / 3), np.int_(result.shape[1] / 3))
+        top_gap = 5
+        gap_between_windows = 8
+        sub_window_size = (np.int_(result.shape[0]/3), np.int_((result.shape[1]-gap_between_windows*4)/3))
 
         # Binary image sub window
+        start_x = gap_between_windows
         color_image = np.dstack((binary_image, binary_image, binary_image)) * 255
         color_image = scipy.misc.imresize(color_image, sub_window_size)
-        result[:sub_window_size[0], :sub_window_size[1]] = color_image
+        result[top_gap:sub_window_size[0]+top_gap, start_x:sub_window_size[1]+start_x] = color_image
+        start_x += sub_window_size[1] + gap_between_windows
 
         # Warped image sub window
         # color_warped = np.dstack((warped, warped, warped)) * 255
         color_warped = self._draw_sliding_windows(warped)
         color_warped = scipy.misc.imresize(color_warped, sub_window_size)
-        result[:sub_window_size[0], -2*sub_window_size[1]:-sub_window_size[1]] = color_warped
+        result[top_gap:sub_window_size[0]+top_gap, start_x:sub_window_size[1]+start_x] = color_warped
+        start_x += sub_window_size[1] + gap_between_windows
 
         # Warped image with lane plotted sub window
         warp_zero = np.zeros_like(warped).astype(np.uint8)
@@ -146,15 +150,15 @@ class LaneDetector:
         lane_img[np.int_(ploty), np.int_(self.left_line.bestx)] = [255, 255, 0]
         lane_img[np.int_(ploty), np.int_(self.right_line.bestx)] = [255, 255, 0]
         lane_img = scipy.misc.imresize(lane_img, sub_window_size)
-        result[:sub_window_size[0], -sub_window_size[1]:] = lane_img
+        result[top_gap:sub_window_size[0]+top_gap, start_x:sub_window_size[1]+start_x] = lane_img
 
         return result
 
-    def detect_lanes(self, img):
+    def detect_lane(self, img):
         undistorted = self.cameraCalibrator.undistort(img)
         binary_image = self.generate_binary_image(undistorted)
         binary_warped = self.perspectiveTransformer.warp_perspective(binary_image)
-        
+
         # Detect left and right lines
         self.left_line.detect(binary_warped, isLeft=True)
         self.right_line.detect(binary_warped, isLeft=False)
@@ -166,9 +170,16 @@ class LaneDetector:
         # Draw texts
         curve_text = 'Radius of Curvature: ({}m, {}m)'.format(round(self.left_line.radius_of_curvature, 1),
                                                               round(self.right_line.radius_of_curvature, 1))
-        cv2.putText(result, curve_text, (50, np.int_(result.shape[0] / 3) + 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
+        cv2.putText(result, curve_text, (50, np.int_(result.shape[0] / 3) + 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
 
-        offset_text = 'Pixel count: ({}, {})'.format(len(self.left_line.allx), len(self.right_line.allx))
-        cv2.putText(result, pixel_count_text, (50, np.int_(result.shape[0] / 3) + 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0), 5)
+        offset = (self.left_line.line_base_pos - self.right_line.line_base_pos) / 2
+        if abs(offset) < 0.1:
+            offset_text = 'Vehicle is on the center'
+        else:
+            offset_side = 'left'
+            if offset < 0:
+                offset_side = 'right'
+            offset_text = 'Vehicle is {}m {} to center'.format(round(abs(offset), 2), offset_side)
+        cv2.putText(result, offset_text, (50, np.int_(result.shape[0] / 3) + 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
 
         return result

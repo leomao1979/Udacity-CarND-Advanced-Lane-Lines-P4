@@ -78,24 +78,24 @@ def test_binary_image():
         save_as = output_dir + 'test_whitebinary_' + filename
         show_images(img, 'Undistorted Image', white_binary, 'White Binary Image', cmap='gray', save_as=save_as)
 
-def detect_lanes():
+def detect_lane():
     for filename in filenames:
         img = mpimg.imread(image_dir + filename)
-        detected = detector.detect_lanes(img)
+        detected = detector.detect_lane(img)
         plt.imshow(detected)
         plt.show()
 
 def process_image(img):
-    result = detector.detect_lanes(img)
+    result = detector.detect_lane(img)
     # plt.imshow(result)
     # plt.show()
     return result
 
-def test_video():
+def detect_lane_for_video():
     video_file = 'project_video.mp4'
     # video_file = 'challenge_video.mp4'
     # video_file = 'harder_challenge_video.mp4'
-    # clip = VideoFileClip(video_file).subclip(0, 10)
+    # clip = VideoFileClip(video_file).subclip(0, 5)
     clip = VideoFileClip(video_file)
     new_clip = clip.fl_image(process_image)
     video_output = 'output_videos/detect_' + video_file
@@ -111,5 +111,5 @@ output_dir = 'output_images/'
 #undistort_image()
 #warp_images()
 #generate_binary_image()
-#detect_lanes()
-test_video()
+#detect_lane()
+detect_lane_for_video()

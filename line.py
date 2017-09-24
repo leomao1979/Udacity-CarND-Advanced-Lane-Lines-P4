@@ -21,8 +21,6 @@ class Line():
         self.radius_of_curvature = None
         # distance in meters of vehicle center from the line
         self.line_base_pos = None
-        # difference in fit coefficients between last and new fits
-        self.diffs = np.array([0,0,0], dtype='float')
         # the count of successive detection failures
         self.successive_failure_count = 0
 
@@ -31,8 +29,8 @@ class Line():
         # the number of *n* fits / iterations to be used for self.bestx and self.best_fit
         self.recent_n = 5
         self.window_height = 80
-        self.margin = 100
-        self.minpix = 50            # minimum pixels to recenter window
+        self.margin = 80
+        self.minpix = 40            # minimum pixels to recenter window
         self.ym_per_pix = 30 / 720  # meters per pixel in y dimension
         self.xm_per_pix = 3.7 / 700 # meters per pixel in x dimension
 
@@ -50,7 +48,8 @@ class Line():
 
             if self._sanity_check(current_fit, radius_of_curvature):
                 self.detected = True
-                self._update(allx, ally, current_fit, x_fitted, radius_of_curvature)
+                self._update(allx, ally, current_fit, x_fitted)
+                self.line_base_pos = abs(self.bestx[height-1] - warped.shape[1]/2) * self.xm_per_pix
 
             self.radius_of_curvature = radius_of_curvature
 
@@ -76,6 +75,7 @@ class Line():
         ally = nonzeroy[pixel_indices]
         return (allx, ally)
 
+    # Detect line pixels with sliding windows
     def _detect_line_pixels(self, warped, isLeft):
         # Take a histogram of the bottom half of the image
         histogram = np.sum(warped[int(warped.shape[0]/2):,:], axis=0)
@@ -134,7 +134,7 @@ class Line():
         # Now our radius of curvature is in meters
         return radius_of_curvature
 
-    def _update(self, allx, ally, current_fit, x_fitted, radius_of_curvature):
+    def _update(self, allx, ally, current_fit, x_fitted):
         self.allx = allx
         self.ally = ally
         self.recent_fits.append(current_fit)
