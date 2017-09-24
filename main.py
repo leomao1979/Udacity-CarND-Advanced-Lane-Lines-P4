@@ -92,17 +92,18 @@ def process_image(img):
     return result
 
 def test_video():
-    # video_file = 'challenge_video.mp4'
     video_file = 'project_video.mp4'
-    clip = VideoFileClip(video_file).subclip(18, 27)
-    # clip = VideoFileClip(video_file)
+    # video_file = 'challenge_video.mp4'
+    # video_file = 'harder_challenge_video.mp4'
+    # clip = VideoFileClip(video_file).subclip(0, 10)
+    clip = VideoFileClip(video_file)
     new_clip = clip.fl_image(process_image)
     video_output = 'output_videos/detect_' + video_file
     new_clip.write_videofile(video_output, audio=False)
 
 detector = LaneDetector()
 image_dir = 'test_images/'
-# filenames = ['straight_lines1.jpg', 'straight_lines2.jpg', 'test3.jpg']
+#filenames = ['straight_lines1.jpg', 'straight_lines2.jpg', 'test3.jpg']
 #filenames = os.listdir(image_dir)
 filenames=['challenge1.jpg']
 output_dir = 'output_images/'
@@ -110,5 +111,5 @@ output_dir = 'output_images/'
 #undistort_image()
 #warp_images()
 #generate_binary_image()
-detect_lanes()
-#test_video()
+#detect_lanes()
+test_video()
