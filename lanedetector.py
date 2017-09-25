@@ -182,7 +182,7 @@ class LaneDetector:
             offset_text = 'Vehicle is on the center'
         else:
             offset_side = 'left'
-            if offset < 0:
+            if offset > 0:
                 offset_side = 'right'
             offset_text = 'Vehicle is {}m {} to center'.format(round(abs(offset), 2), offset_side)
         cv2.putText(result, offset_text, (50, np.int_(result.shape[0] / 3) + 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
