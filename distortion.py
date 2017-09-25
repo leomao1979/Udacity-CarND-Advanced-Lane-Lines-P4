@@ -1,6 +1,7 @@
 import cv2
 import os
 import pickle
+import glob
 import numpy as np
 
 class CameraCalibrator:
@@ -11,23 +12,22 @@ class CameraCalibrator:
 
         self.cameraMatrix = None
         self.distortionCoeffs = None
+        self.pickle_file = 'camera_calibrator.p'
 
-        if os.path.exists('distortion.pickle'):
-            with open('distortion.pickle', 'rb') as f:
+        if os.path.exists(self.pickle_file):
+            with open(self.pickle_file, 'rb') as f:
                 self.cameraMatrix, self.distortionCoeffs = pickle.load(f)
 
         if self.cameraMatrix is None or self.distortionCoeffs is None:
-            print('No valid pickle file found. Calibrating ...')
+            print('No valid pickle file found. Calibrating camera ...')
             self._calibrate()
             print('Done')
         else:
             print('Load caerma matrix and distortion coeffs from pickle file.')
-        # print('self.cameraMatrix: {}'.format(self.cameraMatrix))
-        # print('self.distortionCoeffs: {}'.format(self.distortionCoeffs))
 
     def _calibrate(self):
         objp = np.zeros((self.points_per_row * self.points_per_col, 3), np.float32)
-        objp[:,:2] = np.mgrid[0:self.points_per_row, 0:self.points_per_col].T.reshape(-1,2)
+        objp[:,:2] = np.mgrid[:self.points_per_row, :self.points_per_col].T.reshape(-1,2)
         objpoints = [] # 3d points in real world space
         imgpoints = [] # 2d points in image plane.
 
@@ -44,7 +44,7 @@ class CameraCalibrator:
         ret, self.cameraMatrix, self.distortionCoeffs, rvecs, tvecs \
                                     = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
         # Write to pickle file
-        with open('distortion.pickle', 'wb') as f:
+        with open(self.pickle_file, 'wb') as f:
             pickle.dump([self.cameraMatrix, self.distortionCoeffs], f)
 
     def undistort(self, img):

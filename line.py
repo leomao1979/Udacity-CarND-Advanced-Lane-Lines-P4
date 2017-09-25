@@ -29,15 +29,16 @@ class Line():
         # the number of *n* fits / iterations to be used for self.bestx and self.best_fit
         self.recent_n = 5
         self.window_height = 80
-        self.margin = 80
-        self.minpix = 40            # minimum pixels to recenter window
+        self.margin = 100
+        self.minpix = 50            # minimum pixels to recenter window
         self.ym_per_pix = 30 / 720  # meters per pixel in y dimension
         self.xm_per_pix = 3.7 / 700 # meters per pixel in x dimension
+        self.minimum_pixel_count = 500
 
     def detect(self, warped, isLeft):
         self.detected = False
         allx, ally = self._get_line_pixels(warped, isLeft)
-        if len(allx) > 0:
+        if len(allx) > self.minimum_pixel_count:
             height = warped.shape[0]
             ploty = np.linspace(0, height-1, height)
             current_fit = np.polyfit(ally, allx, 2)
@@ -55,7 +56,7 @@ class Line():
 
         if not self.detected:
             self.successive_failure_count += 1
-            print('Warning: no line pixels detected. isLeft: {}, failures: {}'.format(isLeft, self.successive_failure_count))
+            print('Warning: insufficent pixels detected. isLeft: {}, failures: {}'.format(isLeft, self.successive_failure_count))
 
         return self.detected
 
@@ -114,6 +115,7 @@ class Line():
 
         # Concatenate the array of indices
         pixel_indices = np.concatenate(pixel_indices)
+        # print('Detect line pixels with sliding windows. pixels detected: {}'.format(len(pixel_indices)))
         return pixel_indices
 
     def _sanity_check(self, current_fit, radius_of_curvature):

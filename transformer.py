@@ -25,8 +25,6 @@ class PerspectiveTransformer:
                         [(img_size[0] * 3 / 4 + 30), 0],
                         [(img_size[0] * 3 / 4 + 30), img_size[1]]])
 
-        # print('srcPoints: {}'.format(np.int32(self.srcPoints)))
-        # print('dstPoints: {}'.format(np.int32(self.dstPoints)))
         self.M = cv2.getPerspectiveTransform(self.srcPoints, self.dstPoints)
         self.Minv = cv2.getPerspectiveTransform(self.dstPoints, self.srcPoints)
 

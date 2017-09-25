@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-import glob
 import scipy
 from distortion import CameraCalibrator
 from transformer import PerspectiveTransformer
@@ -13,7 +12,7 @@ class LaneDetector:
         self.left_line = Line()
         self.right_line = Line()
 
-    def generate_binary_image(self, img, s_thresh=(170, 255), sx_thresh=(20, 100)):
+    def generate_binary_image(self, img, s_thresh=(150, 255), sx_thresh=(30, 90)):
         # Convert to HLS color space and separate the V channel
         # hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS).astype(np.float)
         # l_channel = hls[:,:,1]
@@ -29,10 +28,11 @@ class LaneDetector:
         # Threshold color channel
         # s_binary = np.zeros_like(s_channel)
         # s_binary[(s_channel >= s_thresh[0]) & (s_channel <= s_thresh[1])] = 1
-
+        #
         # combined_binary = np.zeros_like(s_binary)
         # combined_binary[(s_binary == 1) | (sxbinary == 1)] = 1
 
+        # return combined_binary
         hsv_img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
         yellow_hsv_low = np.array([0, 60, 160], np.uint8)
         yellow_hsv_high = np.array([40, 255, 255], np.uint8)
@@ -61,8 +61,8 @@ class LaneDetector:
         leftx_base = np.argmax(histogram[:midpoint])
         rightx_base = np.argmax(histogram[midpoint:]) + midpoint
 
-        minpix = 40
-        margin = 80
+        minpix = 50
+        margin = 100
         # Choose the number of sliding windows
         nwindows = 9
         window_height = np.int(binary_warped.shape[0]/nwindows)
@@ -181,5 +181,10 @@ class LaneDetector:
                 offset_side = 'right'
             offset_text = 'Vehicle is {}m {} to center'.format(round(abs(offset), 2), offset_side)
         cv2.putText(result, offset_text, (50, np.int_(result.shape[0] / 3) + 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
+        # pixel_count_text = 'Pixel count: ({}, {})'.format(len(self.left_line.allx), len(self.right_line.allx))
+        # font_color = [255,255,255]
+        # if len(self.left_line.allx) < 600 or len(self.right_line.allx) < 600:
+        #     font_color = [255,0,0]
+        # cv2.putText(result, pixel_count_text, (50, np.int_(result.shape[0] / 3) + 100), cv2.FONT_HERSHEY_SIMPLEX, 1, font_color, 2)
 
         return result
