@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import scipy
+from matplotlib import image  as mpimg
 from distortion import CameraCalibrator
 from transformer import PerspectiveTransformer
 from line import Line
@@ -11,6 +12,8 @@ class LaneDetector:
         self.perspectiveTransformer = PerspectiveTransformer()
         self.left_line = Line()
         self.right_line = Line()
+
+        self.counter = 0
 
     def generate_binary_image(self, img, s_thresh=(150, 255), sx_thresh=(30, 90)):
         # Convert to HLS color space and separate the V channel
@@ -143,14 +146,16 @@ class LaneDetector:
 
         # Warped image with lane plotted sub window
         warp_zero = np.zeros_like(warped).astype(np.uint8)
-        lane_img = np.dstack((warp_zero, warp_zero, warp_zero))
+        line_img = np.dstack((warp_zero, warp_zero, warp_zero))
         ploty = np.linspace(0, result.shape[0]-1, result.shape[0])
-        lane_img[self.left_line.ally, self.left_line.allx] = [255, 0, 0]
-        lane_img[self.right_line.ally, self.right_line.allx] = [0, 0, 255]
-        lane_img[np.int_(ploty), np.int_(self.left_line.bestx)] = [255, 255, 0]
-        lane_img[np.int_(ploty), np.int_(self.right_line.bestx)] = [255, 255, 0]
-        lane_img = scipy.misc.imresize(lane_img, sub_window_size)
-        result[top_gap:sub_window_size[0]+top_gap, start_x:sub_window_size[1]+start_x] = lane_img
+        line_img[self.left_line.ally, self.left_line.allx] = [255, 0, 0]
+        line_img[self.right_line.ally, self.right_line.allx] = [0, 0, 255]
+        line_img[np.int_(ploty), np.int_(self.left_line.bestx)] = [255, 255, 0]
+        line_img[np.int_(ploty), np.int_(self.right_line.bestx)] = [255, 255, 0]
+        if self.counter == 50:
+            mpimg.imsave('output_images/warped_line_random.jpg', line_img, cmap='gray')
+        line_img = scipy.misc.imresize(line_img, sub_window_size)
+        result[top_gap:sub_window_size[0]+top_gap, start_x:sub_window_size[1]+start_x] = line_img
 
         return result
 
@@ -158,7 +163,7 @@ class LaneDetector:
         undistorted = self.cameraCalibrator.undistort(img)
         binary_image = self.generate_binary_image(undistorted)
         binary_warped = self.perspectiveTransformer.warp_perspective(binary_image)
-
+        self.counter += 1
         # Detect left and right lines
         self.left_line.detect(binary_warped, isLeft=True)
         self.right_line.detect(binary_warped, isLeft=False)
@@ -186,5 +191,10 @@ class LaneDetector:
         # if len(self.left_line.allx) < 600 or len(self.right_line.allx) < 600:
         #     font_color = [255,0,0]
         # cv2.putText(result, pixel_count_text, (50, np.int_(result.shape[0] / 3) + 100), cv2.FONT_HERSHEY_SIMPLEX, 1, font_color, 2)
+        if self.counter == 50:
+            # For write up. Video clip: (38, 43)
+            mpimg.imsave('output_images/undistorted_random.jpg', undistorted, cmap='gray')
+            mpimg.imsave('output_images/binary_random.jpg', binary_image, cmap='gray')
+            mpimg.imsave('output_images/result_random.jpg', result)
 
         return result

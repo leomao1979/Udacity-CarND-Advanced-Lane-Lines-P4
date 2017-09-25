@@ -140,8 +140,8 @@ def detect_lane_for_video():
     video_file = 'project_video.mp4'
     # video_file = 'challenge_video.mp4'
     # video_file = 'harder_challenge_video.mp4'
-    # clip = VideoFileClip(video_file).subclip(0, 5)
-    clip = VideoFileClip(video_file)
+    clip = VideoFileClip(video_file).subclip(38, 43)
+    # clip = VideoFileClip(video_file)
     new_clip = clip.fl_image(process_image)
     video_output = 'output_videos/detect_' + video_file
     new_clip.write_videofile(video_output, audio=False)
