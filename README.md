@@ -121,7 +121,7 @@ I verified that my perspective transform was working as expected by drawing the 
 
 When there is no fitted line available, I use sliding windows to find line pixels (lines 89 through 128 in `line.py`), otherwise I just skip it and search in the margin around the previous line position (lines 81 through 86 in `line.py`).
 Then I would check whether there are sufficient line pixels detected. If yes, fit the lines with a 2nd order polynomial and run sanity check on fitted lines.
-The newly detected lines would be applied only if they pass the sanity check (line 148 to 164 in `line.py`).
+The newly detected lines would be applied only if they pass the sanity check (lines 167 through 188 in `lanedetector.py` and lines 148 to 164 in `line.py`).
 
 Example:
 
@@ -129,11 +129,11 @@ Example:
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I measured radius of curvature from lines 140 to 146 in `line.py` and calculated vehicle position on line 61 in the same source file.
+I measured radius of curvature in the method `_measure_curvature()` of class Line (lines 140 to 146 in `line.py`) and calculated vehicle position on line 61 in the same class.
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines 113 through 131 in my code in `lanedetector.py` in the method `_draw_lane()` of class LaneDetector. I also added three sub windows on top of the image to help understand the process of lane detection (lines 133 through 165 in `lanedetector.py`). Here is an example of my result on a test image:
+I implemented this step in the method `_draw_lane()` of class LaneDetector (lines 113 through 131 in `lanedetector.py`). I also added three sub windows on top of the image to demonstrate the process of lane detection (lines 133 through 165 in `lanedetector.py`). Here is an example of my result on a test image:
 
 ![Result Random][result_random]
 
