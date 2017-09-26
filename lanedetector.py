@@ -7,6 +7,8 @@ from transformer import PerspectiveTransformer
 from line import Line
 
 class LaneDetector:
+    WIDTH_CHANGE_THRESHOLD = 0.08
+
     def __init__(self):
         self.cameraCalibrator = CameraCalibrator()
         self.perspectiveTransformer = PerspectiveTransformer()
@@ -14,6 +16,9 @@ class LaneDetector:
         self.right_line = Line()
 
         self.counter = 0
+        self.recent_lane_width = []
+        self.average_lane_width = 0.
+        self.width_change = 0.
 
     def generate_binary_image(self, img, s_thresh=(150, 255), sx_thresh=(30, 90)):
         # Convert to HLS color space and separate the V channel
@@ -159,24 +164,62 @@ class LaneDetector:
 
         return result
 
+    def _sanity_check(self, left_line, right_line):
+        if left_line is None or right_line is None:
+            return False
+
+        result = True
+        lane_width = left_line.line_base_pos + right_line.line_base_pos
+        self.width_change = 0.0
+        if self.average_lane_width != 0.:
+            self.width_change = abs(lane_width/self.average_lane_width - 1)
+        if self.width_change > LaneDetector.WIDTH_CHANGE_THRESHOLD:
+            # Fail the check if lane width change is above WIDTH_CHANGE_THRESHOLD
+            result = False
+            print('LaneDetector._sanity_check failed. width_change: {}, self.average_lane_width: {}, lane_width: {}' \
+                  .format(self.width_change, self.average_lane_width, lane_width))
+        self.recent_lane_width.append(lane_width)
+        if len(self.recent_lane_width) > 10:
+            # Keep last 10 lane width
+            self.recent_lane_width.pop(0)
+        self.average_lane_width = np.average(self.recent_lane_width)
+
+        # TBD: check width on lane top, middle and bottom
+        return result
+
     def detect_lane(self, img):
         undistorted = self.cameraCalibrator.undistort(img)
         binary_image = self.generate_binary_image(undistorted)
         binary_warped = self.perspectiveTransformer.warp_perspective(binary_image)
         self.counter += 1
-        # Detect left and right lines
-        self.left_line.detect(binary_warped, isLeft=True)
-        self.right_line.detect(binary_warped, isLeft=False)
+        # Detect left and right lines, then run sanity test
+        temp_left_lane = self.left_line.detect(binary_warped, isLeft=True)
+        temp_right_lane = self.right_line.detect(binary_warped, isLeft=False)
+        is_valid = self._sanity_check(temp_left_lane, temp_right_lane)
+        self.left_line.detection_confirmed(is_valid)
+        self.right_line.detection_confirmed(is_valid)
 
         # Draw detected lane and sub windows
         result = self._draw_lane(undistorted, binary_warped)
         result = self._draw_sub_windows(result, binary_image, binary_warped)
+        result = self._draw_texts(result)
 
-        # Draw texts
+        self.lane_width = self.left_line.line_base_pos + self.right_line.line_base_pos
+        if self.counter == 50:
+            # For write up. Video clip: (38, 43)
+            mpimg.imsave('output_images/undistorted_random.jpg', undistorted, cmap='gray')
+            mpimg.imsave('output_images/binary_random.jpg', binary_image, cmap='gray')
+            mpimg.imsave('output_images/result_random.jpg', result)
+
+        return result
+
+    def _draw_texts(self, result):
+        # Lane curvature
         curve_text = 'Radius of Curvature: ({}m, {}m)'.format(round(self.left_line.radius_of_curvature, 1),
                                                               round(self.right_line.radius_of_curvature, 1))
         cv2.putText(result, curve_text, (50, np.int_(result.shape[0] / 3) + 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
 
+        # Vehicle position: offset to center
         offset = (self.left_line.line_base_pos - self.right_line.line_base_pos) / 2
         if abs(offset) < 0.1:
             offset_text = 'Vehicle is on the center'
@@ -186,15 +229,12 @@ class LaneDetector:
                 offset_side = 'right'
             offset_text = 'Vehicle is {}m {} to center'.format(round(abs(offset), 2), offset_side)
         cv2.putText(result, offset_text, (50, np.int_(result.shape[0] / 3) + 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
-        # pixel_count_text = 'Pixel count: ({}, {})'.format(len(self.left_line.allx), len(self.right_line.allx))
+
+        # Lane width
         # font_color = [255,255,255]
-        # if len(self.left_line.allx) < 600 or len(self.right_line.allx) < 600:
+        # if self.width_change > LaneDetector.WIDTH_CHANGE_THRESHOLD:
         #     font_color = [255,0,0]
-        # cv2.putText(result, pixel_count_text, (50, np.int_(result.shape[0] / 3) + 100), cv2.FONT_HERSHEY_SIMPLEX, 1, font_color, 2)
-        if self.counter == 50:
-            # For write up. Video clip: (38, 43)
-            mpimg.imsave('output_images/undistorted_random.jpg', undistorted, cmap='gray')
-            mpimg.imsave('output_images/binary_random.jpg', binary_image, cmap='gray')
-            mpimg.imsave('output_images/result_random.jpg', result)
+        # lane_width_text = 'Lane width: ({}m, {}%)'.format(round(self.average_lane_width, 2), round(self.width_change, 2))
+        # cv2.putText(result, lane_width_text, (50, np.int_(result.shape[0] / 3) + 100), cv2.FONT_HERSHEY_SIMPLEX, 1, font_color, 2)
 
         return result

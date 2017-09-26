@@ -66,7 +66,7 @@ Here is an example of distortion correction to one of the test images:
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-I tried different combinations of color and gradient thresholds to generate a binary image (lines 82 through 125 in `main.py`), while the result of thresholded gradients is not impressive. After comparison I decided to use color threshold only (lines 36 through 50 in `lanedetector.py`). Here are two examples to compare different choices:
+I tried different combinations of color and gradient thresholds to generate a binary image (lines 82 through 125 in `main.py`), while the result of thresholded gradients is not impressive. After comparison I decided to use color threshold only (lines 44 through 58 in `lanedetector.py`). Here are two examples to compare different choices:
 
 Example 1:
 
@@ -119,9 +119,9 @@ I verified that my perspective transform was working as expected by drawing the 
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-When there is no fitted line available, I use sliding windows to find line pixels (lines 80 through 119 in `line.py`), otherwise I just skip it and search in the margin around the previous line position (lines 72 through 77 in `line.py`).
+When there is no fitted line available, I use sliding windows to find line pixels (lines 89 through 128 in `line.py`), otherwise I just skip it and search in the margin around the previous line position (lines 81 through 86 in `line.py`).
 Then I would check whether there are sufficient line pixels detected. If yes, fit the lines with a 2nd order polynomial and run sanity check on fitted lines.
-The newly detected lines would be applied only if they pass the sanity check (line 38 to 61 in `line.py`).
+The newly detected lines would be applied only if they pass the sanity check (line 148 to 164 in `line.py`).
 
 Example:
 
@@ -129,11 +129,11 @@ Example:
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I measured radius of curvature from lines 131 to 137 in `line.py` and calculated vehicle position on line 53 in the same source file.
+I measured radius of curvature from lines 140 to 146 in `line.py` and calculated vehicle position on line 61 in the same source file.
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines 108 through 126 in my code in `lanedetector.py` in the method `_draw_lane()` of class LaneDetector. I also added three sub windows on top of the image to help understand the process of lane detection (lines 128 through 160 in `lanedetector.py`). Here is an example of my result on a test image:
+I implemented this step in lines 113 through 131 in my code in `lanedetector.py` in the method `_draw_lane()` of class LaneDetector. I also added three sub windows on top of the image to help understand the process of lane detection (lines 133 through 165 in `lanedetector.py`). Here is an example of my result on a test image:
 
 ![Result Random][result_random]
 
@@ -151,7 +151,7 @@ Here's a [link to my video result](./output_videos/detect_project_video.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-My pipeline keeps track of last several detections and uses the average value of fitted lane lines to detect new ones (lines 12 through 19 in `line.py`). It will start searching from scratch if last n detections fail.
+My pipeline keeps track of last several detections and uses the average value of fitted lane lines to detect new ones (lines 14 through 21 in `line.py`). It will start searching from scratch if last n detections fail.
 The pipeline works pretty good with `project_video.mp4` and is acceptable on `challenge_video.mp4` but performs badly with `harder_challenge_video`. The followings need to be  improved to make it more robust.
 1) Design a better algorithm to generate binary image. It shall highlight lane lines and reduce noises to improve the detection accuracy.
 2) Design an effective sanity check algorithm. The radius of curvature I got is not reliable, so I didn't use it for sanity check. It is critical that a bad detection could be identified and discarded.

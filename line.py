@@ -2,6 +2,8 @@ import numpy as np
 
 # Define a class to receive the characteristics of each line detection
 class Line():
+    MINIMUM_PIXEL_COUNT = 500
+
     def __init__(self):
         # x values for detected line pixels
         self.allx = None
@@ -24,6 +26,8 @@ class Line():
         # the count of successive detection failures
         self.successive_failure_count = 0
 
+        # line detected but not confirmed
+        self.temp_line = None
         # the threshold of successive detection failures. If exceeds, reset and start searching from scratch
         self.successive_failure_threshold = 3
         # the number of *n* fits / iterations to be used for self.bestx and self.best_fit
@@ -33,12 +37,12 @@ class Line():
         self.minpix = 50            # minimum pixels to recenter window
         self.ym_per_pix = 30 / 720  # meters per pixel in y dimension
         self.xm_per_pix = 3.7 / 700 # meters per pixel in x dimension
-        self.minimum_pixel_count = 500
 
     def detect(self, warped, isLeft):
         self.detected = False
+        self.temp_line = None
         allx, ally = self._get_line_pixels(warped, isLeft)
-        if len(allx) > self.minimum_pixel_count:
+        if len(allx) > Line.MINIMUM_PIXEL_COUNT:
             height = warped.shape[0]
             ploty = np.linspace(0, height-1, height)
             current_fit = np.polyfit(ally, allx, 2)
@@ -49,8 +53,13 @@ class Line():
 
             if self._sanity_check(current_fit, radius_of_curvature):
                 self.detected = True
-                self._update(allx, ally, current_fit, x_fitted)
-                self.line_base_pos = abs(self.bestx[height-1] - warped.shape[1]/2) * self.xm_per_pix
+                self.temp_line = Line()
+                self.temp_line.allx = allx
+                self.temp_line.ally = ally
+                self.temp_line.current_fit = current_fit
+                self.temp_line.x_fitted = x_fitted
+                self.temp_line.line_base_pos = abs(self.temp_line.x_fitted[height-1] - warped.shape[1]/2) * self.xm_per_pix
+                self.temp_line.radius_of_curvature = radius_of_curvature
 
             self.radius_of_curvature = radius_of_curvature
 
@@ -58,7 +67,7 @@ class Line():
             self.successive_failure_count += 1
             print('Warning: insufficent pixels detected. isLeft: {}, failures: {}'.format(isLeft, self.successive_failure_count))
 
-        return self.detected
+        return self.temp_line
 
     def _get_line_pixels(self, warped, isLeft):
         nonzero = warped.nonzero()
@@ -136,16 +145,20 @@ class Line():
         # Now our radius of curvature is in meters
         return radius_of_curvature
 
-    def _update(self, allx, ally, current_fit, x_fitted):
-        self.allx = allx
-        self.ally = ally
-        self.recent_fits.append(current_fit)
-        if len(self.recent_fits) > self.recent_n:
-            self.recent_fits.pop(0)
-        self.best_fit = np.average(self.recent_fits, axis=0)
-        self.recent_xfitted.append(x_fitted)
-        if len(self.recent_xfitted) > self.recent_n:
-            self.recent_xfitted.pop(0)
-        self.bestx = np.average(self.recent_xfitted, axis=0)
-        if self.successive_failure_count > 0:
-            self.successive_failure_count = 0
+    def detection_confirmed(self, is_valid):
+        if is_valid:
+            self.allx = self.temp_line.allx
+            self.ally = self.temp_line.ally
+            self.recent_fits.append(self.temp_line.current_fit)
+            if len(self.recent_fits) > self.recent_n:
+                self.recent_fits.pop(0)
+            self.best_fit = np.average(self.recent_fits, axis=0)
+            self.recent_xfitted.append(self.temp_line.x_fitted)
+            if len(self.recent_xfitted) > self.recent_n:
+                self.recent_xfitted.pop(0)
+            self.bestx = np.average(self.recent_xfitted, axis=0)
+            self.line_base_pos = self.temp_line.line_base_pos
+            if self.successive_failure_count > 0:
+                self.successive_failure_count = 0
+        else:
+            self.successive_failure_count += 1
